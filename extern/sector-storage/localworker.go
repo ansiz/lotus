@@ -26,6 +26,12 @@ var pathTypes = []stores.SectorFileType{stores.FTUnsealed, stores.FTSealed, stor
 type WorkerConfig struct {
 	SealProof abi.RegisteredSealProof
 	TaskTypes []sealtasks.TaskType
+	MyCfg     storiface.MyWorkerCfg
+}
+
+// MyWorkerCfg represents the extensional options.
+type ExtraOptions struct {
+	MaxPreCommit1 int
 }
 
 type LocalWorker struct {
@@ -35,6 +41,7 @@ type LocalWorker struct {
 	sindex     stores.SectorIndex
 
 	acceptTasks map[sealtasks.TaskType]struct{}
+	workerCfg   WorkerConfig
 }
 
 func NewLocalWorker(wcfg WorkerConfig, store stores.Store, local *stores.Local, sindex stores.SectorIndex) *LocalWorker {
@@ -52,6 +59,7 @@ func NewLocalWorker(wcfg WorkerConfig, store stores.Store, local *stores.Local, 
 		sindex:     sindex,
 
 		acceptTasks: acceptTasks,
+		workerCfg:   wcfg,
 	}
 }
 
@@ -284,6 +292,7 @@ func (l *LocalWorker) Info(context.Context) (storiface.WorkerInfo, error) {
 			CPUs:        uint64(runtime.NumCPU()),
 			GPUs:        gpus,
 		},
+		Cfg: l.workerCfg.MyCfg,
 	}, nil
 }
 

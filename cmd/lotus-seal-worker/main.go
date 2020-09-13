@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/filecoin-project/lotus/extern/sector-storage/storiface"
+
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	logging "github.com/ipfs/go-log/v2"
@@ -143,6 +145,11 @@ var runCmd = &cli.Command{
 			Name:  "timeout",
 			Usage: "used when 'listen' is unspecified. must be a valid duration recognized by golang's time.ParseDuration function",
 			Value: "30m",
+		},
+		&cli.IntFlag{
+			Name:  "max-P1",
+			Usage: "max precommit1 num",
+			Value: 3,
 		},
 	},
 	Before: func(cctx *cli.Context) error {
@@ -340,12 +347,19 @@ var runCmd = &cli.Command{
 
 		remote := stores.NewRemote(localStore, nodeApi, sminfo.AuthHeader(), cctx.Int("parallel-fetch-limit"))
 
+		maxP1 := cctx.Int("max-P1")
+		if maxP1 <= 0 {
+			maxP1 = 1
+		}
 		// Create / expose the worker
 
 		workerApi := &worker{
 			LocalWorker: sectorstorage.NewLocalWorker(sectorstorage.WorkerConfig{
 				SealProof: spt,
 				TaskTypes: taskTypes,
+				MyCfg: storiface.MyWorkerCfg{
+					MaxPreCommit1: maxP1,
+				},
 			}, remote, localStore, nodeApi),
 			localStore: localStore,
 			ls:         lr,

@@ -7,10 +7,16 @@ import (
 	"github.com/filecoin-project/lotus/extern/sector-storage/sealtasks"
 )
 
+type MyWorkerCfg struct {
+	MaxPreCommit1 int
+}
+
 type WorkerInfo struct {
 	Hostname string
 
 	Resources WorkerResources
+
+	Cfg MyWorkerCfg
 }
 
 type WorkerResources struct {

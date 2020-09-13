@@ -3,20 +3,23 @@ package sectorstorage
 import (
 	"sync"
 
+	"github.com/filecoin-project/go-state-types/abi"
+
 	"github.com/filecoin-project/lotus/extern/sector-storage/storiface"
 )
 
-func (a *activeResources) withResources(id WorkerID, wr storiface.WorkerResources, r Resources, locker sync.Locker, cb func() error) error {
-	for !a.canHandleRequest(r, id, "withResources", wr) {
-		if a.cond == nil {
-			a.cond = sync.NewCond(locker)
-		}
-		a.cond.Wait()
-	}
+func (a *activeResources) withResources(sectorId abi.SectorID, id WorkerID, wr storiface.WorkerResources, r Resources, locker sync.Locker, cb func() error) error {
+	//for !a.canHandleRequest(r, id, "withResources", wr) {
+	//	if a.cond == nil {
+	//		a.cond = sync.NewCond(locker)
+	//	}
+	//	a.cond.Wait()
+	//}
 
 	a.add(wr, r)
 
 	err := cb()
+	delete(a.sealingMap, sectorId)
 
 	a.free(wr, r)
 	if a.cond != nil {
@@ -52,7 +55,7 @@ func (a *activeResources) free(wr storiface.WorkerResources, r Resources) {
 	a.memUsedMax -= r.MaxMemory
 }
 
-func (a *activeResources) canHandleRequest(needRes Resources, wid WorkerID, caller string, res storiface.WorkerResources) bool {
+func (a *activeResources) canHandleRequest(needRes Resources, wid WorkerID, caller string, res storiface.WorkerResources, active *activeResources) bool {
 
 	// TODO: dedupe needRes.BaseMinMemory per task type (don't add if that task is already running)
 	minNeedMem := res.MemReserved + a.memUsedMin + needRes.MinMemory + needRes.BaseMinMemory
@@ -85,6 +88,11 @@ func (a *activeResources) canHandleRequest(needRes Resources, wid WorkerID, call
 			log.Debugf("sched: not scheduling on worker %d for %s; GPU in use", wid, caller)
 			return false
 		}
+	}
+
+	if len(active.sealingMap) > active.cfg.MaxPreCommit1 {
+		log.Debugf("sched: not scheduling on worker %d; over %d precommit phase1", wid, active.cfg.MaxPreCommit1)
+		return false
 	}
 
 	return true

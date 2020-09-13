@@ -179,7 +179,10 @@ func (m *Manager) AddWorker(ctx context.Context, w Worker) error {
 		},
 		info:      info,
 		preparing: &activeResources{},
-		active:    &activeResources{},
+		active: &activeResources{
+			sealingMap: map[abi.SectorID]sealtasks.TaskType{},
+			cfg:        &info.Cfg,
+		},
 	}
 	return nil
 }
